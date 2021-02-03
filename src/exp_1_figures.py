@@ -16,10 +16,10 @@ def plot_figure1a(true_data, false_data):
     sns.set_context('paper', font_scale=1.5)
 
     #Plot distributions, adjust legend etc...
-    sns.distplot(true_data.groupby(['states']).mean()['correct_start'],
-                 color='grey',bins=np.linspace(0,1,10),label='True',kde=False)
-    sns.distplot(false_data.groupby(['states']).mean()['correct_start'],
-                 color='black',bins=np.linspace(0,1,10),label='False',kde=False)
+    sns.distplot(true_data.groupby(['states']).mean()['correct_start'],hist_kws=dict(histtype='stepfilled',alpha=.9,ec="k"),
+                 color='white',bins=np.linspace(0,1,10),label='True',kde=False)
+    sns.distplot(false_data.groupby(['states']).mean()['correct_start'],hist_kws=dict(histtype='stepfilled',alpha=.8,ec="k"),
+                 color='grey',bins=np.linspace(0,1,10),label='False',kde=False)
     plt.yticks(np.linspace(0,25,6))
     plt.xlim(0,1)
     plt.xlabel('Proportion correct')
