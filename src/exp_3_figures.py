@@ -26,8 +26,8 @@ def plot_posterior_predictive_exp3(melted,samples):
             plt.scatter(y1,x1,color=pal[pidx],alpha=.5)
             plt.plot()
     plt.plot([0,1], [0,1], ls='--',color='grey')
-    plt.ylabel('Predicted accuracy')
-    plt.xlabel('Fitted accuracy')
+    plt.ylabel('Observed accuracy')
+    plt.xlabel('Predicted accuracy')
     plt.xlim(0,1)
     plt.ylim(0,1)
     
