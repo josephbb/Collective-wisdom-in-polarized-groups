@@ -157,3 +157,163 @@ def clean_exp_2(dat):
     df['state_recode'] = [state_recode_dict[item] for item in df['state']]
 
     return df
+
+
+def clean_exp3(dat):
+    data = dat[dat.index.values>1]
+
+    #It just so happens that recently, scientists determined pluto is indeed larger. Let's fix that. 
+    data= data.rename(index=str,columns={'Maine_true_Conf_1':'Maine_True_Conf_1'})
+    data.rename(columns={'Russia_True':'Russia_True_T','Russia_True_Conf_1':'Russia_True_Conf_1_T'})
+    data.rename(columns={'Russia_False':'Russia_True','Russia_False_Conf_1':'Russia_True_Conf_1'})
+    data.rename(columns={'Russia_True_T':'Russia_False','Russia_True_Conf_1_T':'Russia_False_Conf_1'})
+    RICols = [item for item in data.columns if "RI_" in item]
+    EICols = [item for item in data.columns if "EI_" in item]
+    BSCols = [item for item in data.columns if "BS_" in item]
+    DEMCols = [item for item in data.columns if "DEM_" in item]
+
+
+
+
+    FalseAnswerCols = [item for item in data.columns if "False" in item and "Conf" not in item]
+    TrueAnswerCols = [item for item in data.columns if "True" in item and "Conf" not in item]
+
+    pol_recode_dict = {'Very Conservative':0, 'Conservative':1, 'Moderate':2,'Liberal':3,'Very Liberal':4}
+    data['pol_recode'] = [pol_recode_dict[item] for item in data['DEM_2'].values]
+    edu_recode_dict = {'Some High School':0, 
+                  'High School':1,
+                  'Some College':2,
+                  'College':3, 
+                  'Graduate Degree or Higher':4}
+    data['edu_recode'] = [edu_recode_dict[item] for item in data.DEM_3]
+    
+    finished = []
+    for idx in data.index.values:
+        answers = (np.array([data[data.CintID==data['CintID'].loc[idx]][item].values[0] for item in RICols]))
+        finishedAnswers = np.array([str(answer) != 'nan' for answer in answers])
+        finished.append(np.all(finishedAnswers))
+    data['finished'] = finished
+    data = data[data.finished==True]
+       
+    RIDict = {'Definitely not true of myself 1':0,
+         '2':1,
+         'Not true or untrue 3':2,
+         '4':3,
+         'Definitely true of myself 5':4,
+         np.nan:np.nan}
+    RIDict_rev = {'Definitely not true of myself 1':4,
+             '2':3,
+             'Not true or untrue 3':2,
+             '4':1,
+             'Definitely true of myself 5':0,
+             np.nan:np.nan}
+
+    RISCore = np.array([[RIDict[item] for item in data['RI_1'].values],
+    [RIDict[item] for item in data['RI_2'].values],
+    [RIDict_rev[item] for item in data['RI_3'].values],
+    [RIDict_rev[item] for item in data['RI_4'].values],
+    [RIDict[item] for item in data['RI_5'].values],])
+
+    RISCore = np.mean(RISCore,axis=0)
+    data['RIS'] = RISCore
+
+
+    data['HBS'] = np.sum(np.array([data['SS_Squash'].values == '15 points',
+    data['GF1_Slot'].values == "1",
+    data['DenNeglect'].values == 'small tray (10 marbles)',
+    data['ProbMatch'].values == 'Strategy D: Predict red on all of the 60 rolls. ']),axis=0)
+
+
+    data['WSS'] = np.sum(np.array([data['WS_1'].values == 'widen',
+    data['WS_2'].values == "come",
+    data['WS_3'].values == 'whim',
+    data['WS_4'].values == 'reference',
+    data['WS_5'].values == 'daring',]),axis=0)
+
+
+
+    data['NUMS'] = np.sum(np.array([data['Num1'].values == "500",
+    data['Num2'].values == '10',
+    data['Num3'].values == '1 in 10']),axis=0)
+
+
+    EIDict1 = {'Definitely not true of myself 1':0,
+             '2':1,
+             'Note true or untrue 3':2,
+             '4':3,
+             'Definitely true of myself 5':4,
+             np.nan:np.nan}
+    EIDict2 = {'Definitely not true of myself 1':0,
+             '2':1,
+             'Not true or untrue 3':2,
+             '4':3,
+             'Definitely true of myself 5':4,
+             np.nan:np.nan}
+    EIDict_rev = {'Definitely not true of myself 1':4,
+             '2':3,
+             'Not true or untrue 3':2,
+             '4':1,
+             'Definitely true of myself 5':0,
+             np.nan:np.nan}
+
+    EIScore = np.array([[EIDict1[item] for item in data['EI_1'].values],
+    [EIDict2[item] for item in data['EI_2'].values],
+    [EIDict_rev[item] for item in data['EI_3'].values],
+    [EIDict_rev[item] for item in data['EI_4'].values],
+    [EIDict_rev[item] for item in data['EI_5'].values],])
+
+    EIScore = np.mean(EIScore,axis=0)
+    data['EIS'] = EIScore
+
+    BSRescore = {'Not at all profound':0, 'Somewhat profound':1,'Fairly profound':2, 'Very profound':3,'Definitely profound':4,np.nan:np.nan}
+    BSScores= np.nanmean(np.array([[BSRescore[item] for item in data[BSQ].values] for BSQ in BSCols]),axis=0)
+    data['BSS'] = BSScores
+
+
+    BSRescore = {'Not at all profound':0, 'Somewhat profound':1,'Fairly profound':2, 'Very profound':3,'Definitely profound':4,np.nan:np.nan}
+
+    dats = []
+    for column in data.columns:
+        if 'Conf' in column:
+            tt = data[data[column.split('_')[0] + '_' +column.split('_')[1]].values.astype(str)!='nan']
+            conf = tt[column].values.astype('int')
+            answer = tt[column.split('_')[0] + '_' +column.split('_')[1]]
+
+            correct = answer == column.split('_')[1]
+            correct[answer.astype('str')=='nan'] = np.nan
+            temp = {'conf':conf,
+                        'answer':answer,
+                        'question': [column.split('_')[0] + '_' +column.split('_')[1] for item in answer],
+                        'correct':correct,
+                        'correct_conf':[np.mean(conf[correct == True]) for item in answer],
+                        'incorrect_conf':[np.mean(conf[correct == False]) for item in answer],
+
+                        'difficulty':[np.mean(correct) for item in answer],
+                        'pol_recode':tt.pol_recode,
+                        'DEM_1': tt.DEM_1,
+                        'DEM_2': tt.DEM_2,
+                        'DEM_3': tt.DEM_3,
+                        'DEM_4': tt.DEM_4,
+                        'BSS' : tt.BSS,
+                        'WSS' : tt.WSS,
+                        'EIS' : tt.EIS,
+                        'HBS' : tt.HBS,
+                        'NUMS' : tt.NUMS,
+                        'RIS' : tt.RIS,
+                        'CintID' : tt.CintID,
+                        'edu_recode': tt.edu_recode
+
+                     }
+            dats.append(temp)
+    melted = pd.concat([pd.DataFrame(item).dropna() for item in dats])
+    id_recode = dict(zip(np.unique(melted.CintID),np.arange(np.unique(melted.CintID).shape[0])+1))
+    melted['id_recode'] = [id_recode[item] for item in melted.CintID]
+    melted.answer = melted.answer.values == 'True'
+    melted.conf = melted.conf /50 - 1.0
+    melted['question_code'] = pd.Categorical(melted['question']).codes+1
+    
+    
+    return data, melted
+    
+    
+    

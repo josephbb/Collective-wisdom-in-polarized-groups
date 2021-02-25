@@ -1,6 +1,9 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import rankdata
+import patsy as pt
+def scale(t):
+    return (t-np.mean(t))/np.std(t)
 
 
 def recode_id(df):
@@ -107,3 +110,37 @@ def format_stan_data_exp2(exp_2_data):
                         p = grouped_exp2['p_recode'].values.astype('int'),
                         cond = grouped_exp2['cond_recode'].values+1)
     return state_data, false_exp2_data
+
+def format_stan_data_exp3(melted,with_cb=False):
+    ind_predictors = melted.groupby('id_recode').mean().reset_index()
+    ind_predictors['pol_recode'] = pd.Categorical(ind_predictors['pol_recode'].astype('int'))
+    melted['pol_recode2'] = pd.Categorical(melted['pol_recode'])
+    melted['question_code2'] = pd.Categorical(melted['question_code'])
+
+    t =ind_predictors['BSS'].values
+    for var in ['BSS','WSS','EIS','HBS','NUMS','RIS']:
+        ind_predictors[var+'_s'] = scale(ind_predictors[var].values)
+    if with_cb:
+        _, u = pt.dmatrices('correct~BSS_s+WSS_s+EIS_s+HBS_s+NUMS_s+RIS_s-1',ind_predictors)
+    else:
+        _, u = pt.dmatrices('correct~C(pol_recode)-1',ind_predictors)
+    u = np.array(u)
+
+    _, x1 = pt.dmatrices('correct~C(pol_recode)+C(pol_recode):conf-1',melted)
+    x1 = np.array(x1)
+    x2 = np.vstack([np.ones(melted.shape[0]), scale(melted['conf'].values)])
+
+    exp3_stan_df = dict(N=x2.shape[1],
+                        K2=x2.shape[0],
+                        K1=x1.shape[1],
+                        Q=melted['question_code'].unique().size,
+                        S=melted['id_recode'].unique().size,
+                        L = u.shape[1],
+                        y=melted['correct'].astype('int').values,
+                        ss = melted['id_recode'].values,
+                        qq=melted['question_code'].values,
+                        x2=x2.T,
+                        x1=x1,
+                        conf=melted['conf'].values,
+                        u =u.T)
+    return exp3_stan_df
