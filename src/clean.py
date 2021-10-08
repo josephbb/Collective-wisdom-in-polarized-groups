@@ -53,13 +53,13 @@ def clean_exp_1(exp1_data_raw):
     data_exp1 = data_exp1.dropna()
 
     #Split data into those where the correct answer is true and compute the proportion correct (difficulty)
-    true_data = data_exp1[data_exp1.answer==True]
+    true_data = data_exp1[data_exp1.answer==True].copy()
     difficulty = dict(zip(true_data.groupby('states').mean().correct_start.keys(),
                           true_data.groupby('states').mean().correct_start.values))
     true_data['difficulty'] = [difficulty[item] for item in true_data.states.values]
 
     #Split data into those where the correct answer is false and compute the proportion correct (difficulty)
-    false_data = data_exp1[data_exp1.answer==False]
+    false_data = data_exp1[data_exp1.answer==False].copy()
     difficulty = dict(zip(false_data.groupby('states').mean().correct_start.keys(),
                           false_data.groupby('states').mean().correct_start.values))
     false_data['difficulty'] = [difficulty[item] for item in false_data.states.values]
@@ -162,7 +162,7 @@ def clean_exp_2(dat):
 def clean_exp3(dat):
     data = dat[dat.index.values>1]
 
-    #It just so happens that recently, scientists determined pluto is indeed larger. Let's fix that. 
+    #It just so happens that recently, scientists determined pluto is indeed larger. Let's fix that.
     data= data.rename(index=str,columns={'Maine_true_Conf_1':'Maine_True_Conf_1'})
     data.rename(columns={'Russia_True':'Russia_True_T','Russia_True_Conf_1':'Russia_True_Conf_1_T'})
     data.rename(columns={'Russia_False':'Russia_True','Russia_False_Conf_1':'Russia_True_Conf_1'})
@@ -180,13 +180,13 @@ def clean_exp3(dat):
 
     pol_recode_dict = {'Very Conservative':0, 'Conservative':1, 'Moderate':2,'Liberal':3,'Very Liberal':4}
     data['pol_recode'] = [pol_recode_dict[item] for item in data['DEM_2'].values]
-    edu_recode_dict = {'Some High School':0, 
+    edu_recode_dict = {'Some High School':0,
                   'High School':1,
                   'Some College':2,
-                  'College':3, 
+                  'College':3,
                   'Graduate Degree or Higher':4}
     data['edu_recode'] = [edu_recode_dict[item] for item in data.DEM_3]
-    
+
     finished = []
     for idx in data.index.values:
         answers = (np.array([data[data.CintID==data['CintID'].loc[idx]][item].values[0] for item in RICols]))
@@ -194,7 +194,7 @@ def clean_exp3(dat):
         finished.append(np.all(finishedAnswers))
     data['finished'] = finished
     data = data[data.finished==True]
-       
+
     RIDict = {'Definitely not true of myself 1':0,
          '2':1,
          'Not true or untrue 3':2,
@@ -311,9 +311,6 @@ def clean_exp3(dat):
     melted.answer = melted.answer.values == 'True'
     melted.conf = melted.conf /50 - 1.0
     melted['question_code'] = pd.Categorical(melted['question']).codes+1
-    
-    
+
+
     return data, melted
-    
-    
-    
